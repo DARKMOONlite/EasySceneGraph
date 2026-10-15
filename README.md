@@ -1,4 +1,4 @@
-# scene_graph_project
+# EasySceneGraph
 A project for creating useful spatial scene graphs from images. 
 
 
