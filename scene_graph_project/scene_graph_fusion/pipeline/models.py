@@ -107,8 +107,8 @@ class SceneObject:
         confidence: Detection confidence from the source model.
         source: Name of the source that produced this object.
         uid: Unique identifier, auto-generated.
+        scene_graph_id: Unique identifier of the scene graph this object belongs to. is set when added to a graph
     """
-
     label: str
     original_identifier: int = -1
     bbox: BoundingBox | None = None
@@ -117,10 +117,12 @@ class SceneObject:
     source: str = ""
     canonical_label: str = ""
     uid: uuid.UUID = field(default_factory=uuid.uuid4)
+    scene_graph_id: uuid.UUID|None = None 
 
     def __post_init__(self):
         self.label = self.label.strip().lower()
-        if not self.canonical_label:
+        self.canonical_label = self.canonical_label.strip().lower()
+        if not self.canonical_label or len(self.canonical_label) == 0:
             self.canonical_label = self.label
 
 
@@ -132,9 +134,10 @@ class Relationship:
         subject_uid: UID of the subject SceneObject.
         predicate: Relationship label (e.g. "on", "holding", "next to").
         object_uid: UID of the object SceneObject.
-        canonical_predicate: Standardised predicate after normalisation.
+        canonical_predicate: Standardised predicate after normalisation. set in the __init__ method if not provided.
         confidence: Confidence from the source model.
         source: Name of the source that produced this relationship.
+        scene_graph_id: Unique identifier of the scene graph this relationship belongs to. is set when added to a graph
     """
 
     subject_uid: uuid.UUID
@@ -143,6 +146,7 @@ class Relationship:
     confidence: float = 1.0
     source: str = ""
     canonical_predicate: str = ""
+    scene_graph_id: uuid.UUID|None = None 
 
     def __post_init__(self):
         self.predicate = self.predicate.strip().lower()
@@ -171,8 +175,15 @@ class SceneGraph:
     source: str = ""
     objects: list[SceneObject] = field(default_factory=list)
     relationships: list[Relationship] = field(default_factory=list)
+    scene_graph_id:uuid.UUID = field(default_factory=uuid.uuid4)
 
     # --- convenience look-ups ---
+
+    def __post_init__(self):
+        for obj in self.objects:
+            obj.scene_graph_id = self.scene_graph_id
+        for rel in self.relationships:
+            rel.scene_graph_id = self.scene_graph_id
 
     def object_by_uid(self, uid: str) -> SceneObject | None:
         """Return the object with the given UID, or ``None``."""
@@ -193,11 +204,13 @@ class SceneGraph:
 
     def add_object(self, obj: SceneObject) -> SceneObject:
         """Append an object and return it."""
+        obj.scene_graph_id = self.scene_graph_id
         self.objects.append(obj)
         return obj
 
     def add_relationship(self, rel: Relationship) -> Relationship:
         """Append a relationship and return it."""
+        rel.scene_graph_id = self.scene_graph_id
         self.relationships.append(rel)
         return rel
 
@@ -277,3 +290,15 @@ class SceneGraph:
         merged.relationships = relationships
         
         return merged
+
+    def filter_by_confidence(self, threshold: float)->SceneGraph:
+        """Filter objects and relationships based on a confidence threshold."""
+        filtered_objects = [obj for obj in self.objects if obj.confidence >= threshold]
+        filtered_uids = {obj.uid for obj in filtered_objects}
+        filtered_relationships = [rel for rel in self.relationships if rel.subject_uid in filtered_uids and rel.object_uid in filtered_uids and rel.confidence >= threshold]
+        return SceneGraph(
+            image_id=self.image_id,
+            source=self.source,
+            objects=filtered_objects,
+            relationships=filtered_relationships
+        )

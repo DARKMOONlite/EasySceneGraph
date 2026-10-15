@@ -18,7 +18,9 @@ dependencies = [
 	'ortools',
 	'boxmot',
 	'numpy < 2.0', 
-
+	'scipy >= 1.16.0',
+	'nuscenes-devkit',
+	'pillow',
 ]
 
 [project.scripts]
