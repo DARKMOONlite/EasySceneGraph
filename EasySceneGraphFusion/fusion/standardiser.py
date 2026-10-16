@@ -40,8 +40,8 @@ class Standardiser:
     def __init__(
         self,
         *,
-        object_syn_map: dict[str, str] | None = None,
-        predicate_syn_map: dict[str, str] | None = None,
+        object_syn_map: dict[str, str] = {},
+        predicate_syn_map: dict[str, str] = {},
         wup_threshold: float = 0.8,
         spacy_model: str = "en_core_web_sm",
         blacklist: set[str] | None = None,
@@ -58,16 +58,8 @@ class Standardiser:
         self.blacklisted_relationships = {label.strip().lower() for label in (relationship_blacklist or set())}
 
         # label → canonical label
-        self._label_map: dict[str, str] = {}
-        self._predicate_map: dict[str, str] = {}
-
-        # seed with synonym tables
-        
-        for variant, canonical in object_syn_map.items():
-            self._label_map[variant.lower()] = canonical.lower()
-
-        for variant, canonical in predicate_syn_map.items():
-            self._predicate_map[variant.lower()] = canonical.lower()
+        self._object_map: dict[str, str] = object_syn_map
+        self._predicate_map: dict[str, str] = predicate_syn_map
 
     # ------------------------------------------------------------------
     # Public API
@@ -108,24 +100,24 @@ class Standardiser:
     def canonicalise_label(self, label: str) -> str:
         """Return the canonical form of an object *label*."""
         label = label.strip().lower()
-        if label in self._label_map:
-            return self._label_map[label]
+        if label in self._object_map:
+            return self._object_map[label]
 
         lemma = self._lemmatise(label)
-        if lemma in self._label_map:
-            self._label_map[label] = self._label_map[lemma]
-            return self._label_map[label]
+        if lemma in self._object_map:
+            self._object_map[label] = self._object_map[lemma]
+            return self._object_map[label]
 
         # check against every known canonical label via WordNet similarity
-        canonical = self._find_wordnet_match(lemma, set(self._label_map.values()))
+        canonical = self._find_wordnet_match(lemma, set(self._object_map.values()))
         if canonical is not None:
-            self._label_map[label] = canonical
-            self._label_map[lemma] = canonical
+            self._object_map[label] = canonical
+            self._object_map[lemma] = canonical
             return canonical
 
         # no match — this lemma becomes its own canonical form
-        self._label_map[label] = lemma
-        self._label_map[lemma] = lemma
+        self._object_map[label] = lemma
+        self._object_map[lemma] = lemma
         return lemma
 
     def canonicalise_predicate(self, predicate: str) -> str:
@@ -146,7 +138,7 @@ class Standardiser:
     @property
     def label_vocabulary(self) -> set[str]:
         """The current set of canonical object labels."""
-        return set(self._label_map.values())
+        return set(self._object_map.values())
 
     @property
     def predicate_vocabulary(self) -> set[str]:

@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 from ortools.graph.python import min_cost_flow
 from dataclasses import dataclass
-from EasySceneGraphFusion.fusion.models import BoundingBox, SceneGraph, SceneGraphShape,SceneObject,Relationship
+from EasySceneGraphFusion.fusion.classes import BoundingBox, SceneGraph, SceneGraphShape,SceneObject,Relationship
 from collections import Counter
 import matplotlib.pyplot as plt
 @dataclass

@@ -19,7 +19,7 @@ from dataclasses import astuple, dataclass, field, replace
 from typing import Callable, Hashable
 from uuid import UUID
 
-from EasySceneGraphFusion.fusion.models import BoundingBox, Relationship, SceneGraph, SceneObject
+from EasySceneGraphFusion.fusion.classes import BoundingBox, Relationship, SceneGraph, SceneObject
 from EasySceneGraphFusion.fusion.wordnet import WordNetType, wup_confidence
 from scipy.cluster.hierarchy import DisjointSet
 # ---------------------------------------------------------------------------

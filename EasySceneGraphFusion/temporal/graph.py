@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 from copy import deepcopy
-from EasySceneGraphFusion.fusion.models import SceneObject, SceneGraph, Relationship
+from EasySceneGraphFusion.fusion.classes import SceneObject, SceneGraph, Relationship
 
 
 

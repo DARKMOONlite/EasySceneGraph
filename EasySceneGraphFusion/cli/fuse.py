@@ -1,9 +1,10 @@
 
 from argparse import ArgumentParser
 from EasySceneGraphFusion.fusion import Standardiser, SceneGraphFusion, FusionConfig, save_scene_graph_json, load_scene_graph_json
-from EasySceneGraphFusion.fusion.models import SceneGraph
+from EasySceneGraphFusion.fusion.classes import SceneGraph
 from EasySceneGraphFusion.fusion.wordnet import install_wordnet
 from EasySceneGraphFusion.fusion.io import collect_scene_graph_files
+from EasySceneGraphFusion.cli.defaults import _DEFAULT_OBJECT_SYNONYMS, _DEFAULT_PREDICATE_SYNONYMS
 from tqdm import tqdm
 import os
 from pathlib import Path
@@ -30,7 +31,7 @@ def main(args):
         return
         
     fusion = SceneGraphFusion(config=FusionConfig(iou_threshold=args.iou_threshold))
-    std = Standardiser(wup_threshold=args.wup_threshold)
+    std = Standardiser(wup_threshold=args.wup_threshold, object_syn_map=_DEFAULT_OBJECT_SYNONYMS, predicate_syn_map=_DEFAULT_PREDICATE_SYNONYMS )
     
     Path(args.output).mkdir(parents=True, exist_ok=True)
     

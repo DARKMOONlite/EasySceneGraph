@@ -1,4 +1,4 @@
-_DEFAULT_SYNONYMS: dict[str, str] = {
+_DEFAULT_OBJECT_SYNONYMS: dict[str, str] = {
     "man": "person",
     "woman": "person",
     "boy": "person",

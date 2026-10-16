@@ -1,5 +1,5 @@
 from EasySceneGraphFusion.fusion.io import load_scene_graph_json
-from EasySceneGraphFusion.fusion.models import SceneGraph
+from EasySceneGraphFusion.fusion.classes import SceneGraph
 from argparse import ArgumentParser
 from matplotlib import pyplot as plt
 

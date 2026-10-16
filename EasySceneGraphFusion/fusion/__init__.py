@@ -9,7 +9,7 @@ from .io import (
     save_scene_graph_json,
     scene_graph_to_dict,
 )
-from .models import BoundingBox, Relationship, SceneGraph, SceneGraphJsonEncoder, SceneObject
+from .classes import BoundingBox, Relationship, SceneGraph, SceneGraphJsonEncoder, SceneObject
 from .standardiser import Standardiser
 
 __all__ = [

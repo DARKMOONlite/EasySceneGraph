@@ -6,7 +6,6 @@ import json
 import sys
 
 ILP_PROJECT_ROOT = Path("~/Documents/phd/inductive_logic_programming/neurosymbolic_ILP").expanduser()
-IMAGES_ROOT = Path("/mnt/sda1/Datasets/nuscenes/v1.0-mini/")
 if str(ILP_PROJECT_ROOT) not in sys.path:
     sys.path.append(str(ILP_PROJECT_ROOT))
 
@@ -139,58 +138,25 @@ def save_scene_graph(graph, output_path: Path) -> None:
 
 
 def _resolve_scene_graph_path(args, frame_path: Path) -> Path | None:
-    graph_rel_path = frame_path.with_suffix(".json")
     if not frame_path.parts:
-        return args.input_folder / graph_rel_path if args.input_folder is not None else None
+        return None
 
     source = frame_path.parts[0]
     if source == "samples":
-        if args.samples_folder is not None:
-            return args.samples_folder / Path(*frame_path.parts[1:]).with_suffix(".json")
-        if args.input_folder is not None:
-            return args.input_folder / graph_rel_path
-        return None
+        return args.samples_folder / Path(*frame_path.parts[1:]).with_suffix(".json")
     if source == "sweeps":
-        if args.sweeps_folder is not None:
-            return args.sweeps_folder / Path(*frame_path.parts[1:]).with_suffix(".json")
-        if args.input_folder is not None:
-            return args.input_folder / graph_rel_path
-        return None
+        return args.sweeps_folder / Path(*frame_path.parts[1:]).with_suffix(".json")
 
-    if args.input_folder is not None:
-        return args.input_folder / graph_rel_path
-    if args.samples_folder is not None:
-        return args.samples_folder / graph_rel_path
-    if args.sweeps_folder is not None:
-        return args.sweeps_folder / graph_rel_path
     return None
 
 
-def _resolve_images_root(args) -> Path:
-    if args.images_root is not None:
-        return args.images_root
-    for folder in (args.samples_folder, args.sweeps_folder, args.input_folder):
-        if folder is None:
-            continue
-        for ancestor in (folder, *folder.parents):
-            if ancestor.name == "scene_graphs":
-                # ponytail: standard nuScenes layouts keep images beside scene_graphs.
-                return ancestor.parent
-    return IMAGES_ROOT
-
-
 def _relative_parent_for_output(args, graph_path: Path) -> Path:
-    if args.samples_folder is not None:
+    for graph_root in (args.samples_folder, args.sweeps_folder):
         try:
-            return graph_path.parent.relative_to(args.samples_folder)
+            return graph_path.parent.relative_to(graph_root)
         except ValueError:
             pass
-    if args.input_folder is not None:
-        try:
-            return graph_path.parent.relative_to(args.input_folder / "samples")
-        except ValueError:
-            pass
-    return graph_path.parent
+    raise ValueError(f"Scene graph path is outside the configured graph folders: {graph_path}")
 
 
 def _build_action_result_windows(
@@ -337,14 +303,12 @@ def _process_track_batch(tracks: list[list[dict]]) -> tuple[int, int, float, int
 
 
 def main(args):
-    if args.input_folder is None and args.samples_folder is None and args.sweeps_folder is None:
-        raise ValueError("Provide at least one of --input_folder, --samples-folder, or --sweeps-folder")
-    if args.input_folder is not None and not args.input_folder.exists():
-        raise FileNotFoundError(f"Input folder does not exist: {args.input_folder}")
-    if args.samples_folder is not None and not args.samples_folder.exists():
+    if not args.samples_folder.is_dir():
         raise FileNotFoundError(f"Samples folder does not exist: {args.samples_folder}")
-    if args.sweeps_folder is not None and not args.sweeps_folder.exists():
+    if not args.sweeps_folder.is_dir():
         raise FileNotFoundError(f"Sweeps folder does not exist: {args.sweeps_folder}")
+    if not args.images_root.is_dir():
+        raise FileNotFoundError(f"Images root does not exist: {args.images_root}")
     if args.threads < 1:
         raise ValueError("--threads must be at least 1")
     if args.visualise and args.threads > 1:
@@ -361,7 +325,6 @@ def main(args):
     if annotated_scenes is not None:
         image_rows = _filter_rows_by_scene(image_rows, annotated_scenes)
         print(f"Restricting processing to {len(annotated_scenes)} scenes in human_annotations")
-    images_root = _resolve_images_root(args)
     if args.use_action_result_timestamps:
         window_jobs, unique_range_count = _build_action_result_windows(
             db=db,
@@ -386,7 +349,7 @@ def main(args):
 
     if batches:
         set_start_method("spawn", force=True)
-        with ProcessPoolExecutor(max_workers=args.threads,initializer=_initialise_worker,initargs=(args, images_root),) as executor:
+        with ProcessPoolExecutor(max_workers=args.threads,initializer=_initialise_worker,initargs=(args, args.images_root),) as executor:
             futures = [executor.submit(worker, batch) for batch in batches] # type: ignore
             results = [
                 future.result()
@@ -410,25 +373,22 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     parser.add_argument(
-        "-i",
-        "--input_folder",
-        type=Path,
-        help="Path to a root folder containing scene graphs under samples/ and sweeps/",
-    )
-    parser.add_argument(
         "--samples-folder",
         type=Path,
+        required=True,
         help="Path to scene graphs for sample frames (e.g. .../samples).",
     )
     parser.add_argument(
         "--sweeps-folder",
         type=Path,
-        help="Path to scene graphs for sweep frames (e.g. .../sweeps). Optional.",
+        required=True,
+        help="Path to scene graphs for sweep frames (e.g. .../sweeps).",
     )
     parser.add_argument(
         "--images-root",
         type=Path,
-        help="Path containing the samples/ and sweeps/ image folders. Defaults to the parent of scene_graphs.",
+        required=True,
+        help="Path containing the samples/ and sweeps/ image folders.",
     )
     parser.add_argument(
         "-o",

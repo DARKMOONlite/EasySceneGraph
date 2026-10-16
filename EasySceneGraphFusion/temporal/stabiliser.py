@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 
 import cv2
 
-from EasySceneGraphFusion.fusion.models import BoundingBox, SceneGraph, SceneObject, Relationship
+from EasySceneGraphFusion.fusion.classes import BoundingBox, SceneGraph, SceneObject, Relationship
 from EasySceneGraphFusion.temporal.tracking import NetworkFlow, NodeID
 from EasySceneGraphFusion.temporal.graph import TemporalSceneGraph
 from boxmot.trackers.basetracker import BaseTracker

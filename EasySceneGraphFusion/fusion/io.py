@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-from EasySceneGraphFusion.fusion.models import BoundingBox, Relationship, SceneGraph, SceneObject
+from EasySceneGraphFusion.fusion.classes import BoundingBox, Relationship, SceneGraph, SceneObject
 
 
 # ---------------------------------------------------------------------------
