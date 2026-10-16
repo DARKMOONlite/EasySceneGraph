@@ -10,10 +10,10 @@ A project for creating, fusing and manipulating spatial scene graphs,
 ## Installation
 
 ```bash
-
 pip install .
-
 ```
+> [!NOTE]
+> To install the nuscene dependant code, please include the NuScenes dependencies: `pip install '.[nuscenes]'`. This package however currently requires `Numpy` <2.0.0 and python 3.9/3.13.
 
 ## Usage
 

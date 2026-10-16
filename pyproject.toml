@@ -8,13 +8,15 @@ dependencies = [
     "matplotlib",
     "networkx",
     "nltk",
-    # "numpy < 2.0",
-    "nuscenes-devkit",
     "ortools",
     "pillow",
     "scipy >= 1.16.0",
     "spacy",
     "tqdm",
+]
+[project.optional-dependencies]
+nuscenes = [
+    "nuscenes-devkit>=1.2.0,<1.3",
 ]
 
 [project.scripts]
