@@ -21,51 +21,7 @@ from EasySceneGraphFusion.fusion.wordnet import (
     build_hierarchy,
     wup_confidence,
 )
-from EasySceneGraphFusion.fusion.models import SceneGraph, SceneObject
-
-# ---------------------------------------------------------------------------
-# Built-in synonym map – covers the most common cross-detector divergences.
-# Keys are variant spellings; values are the canonical form.
-# ---------------------------------------------------------------------------
-_DEFAULT_SYNONYMS: dict[str, str] = {
-    "man": "person",
-    "woman": "person",
-    "boy": "person",
-    "girl": "person",
-    "child": "person",
-    "guy": "person",
-    "lady": "person",
-    "people": "person",
-    "kid": "person",
-    "bike": "bicycle",
-    "motorbike": "motorcycle",
-    "aeroplane": "airplane",
-    "tv": "television",
-    "sofa": "couch",
-    "cellphone": "cell phone",
-    "spectacles": "glasses",
-    "auto": "car",
-}
-
-_DEFAULT_PREDICATE_SYNONYMS: dict[str, str] = {
-    "on top of": "on",
-    "above": "on",
-    "atop": "on",
-    "beneath": "under",
-    "below": "under",
-    "beside": "next to",
-    "alongside": "next to",
-    "near": "next to",
-    "in front of": "in front of",
-    "behind": "behind",
-    "inside": "in",
-    "within": "in",
-    "holding": "holding",
-    "carrying": "holding",
-    "wearing": "wearing",
-    "has": "has",
-    "with": "has",
-}
+from EasySceneGraphFusion.fusion.classes import SceneGraph, SceneObject
 
 
 class Standardiser:
@@ -84,8 +40,8 @@ class Standardiser:
     def __init__(
         self,
         *,
-        synonym_map: dict[str, str] | None = None,
-        predicate_synonym_map: dict[str, str] | None = None,
+        object_syn_map: dict[str, str] | None = None,
+        predicate_syn_map: dict[str, str] | None = None,
         wup_threshold: float = 0.8,
         spacy_model: str = "en_core_web_sm",
         blacklist: set[str] | None = None,
@@ -106,12 +62,11 @@ class Standardiser:
         self._predicate_map: dict[str, str] = {}
 
         # seed with synonym tables
-        synonyms = {**_DEFAULT_SYNONYMS, **(synonym_map or {})}
-        for variant, canonical in synonyms.items():
+        
+        for variant, canonical in object_syn_map.items():
             self._label_map[variant.lower()] = canonical.lower()
 
-        pred_synonyms = {**_DEFAULT_PREDICATE_SYNONYMS, **(predicate_synonym_map or {})}
-        for variant, canonical in pred_synonyms.items():
+        for variant, canonical in predicate_syn_map.items():
             self._predicate_map[variant.lower()] = canonical.lower()
 
     # ------------------------------------------------------------------

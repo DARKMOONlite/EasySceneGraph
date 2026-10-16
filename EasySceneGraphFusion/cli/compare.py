@@ -19,7 +19,7 @@ from EasySceneGraphFusion.fusion import (
     load_scene_graph_json,
 )
 from EasySceneGraphFusion.fusion.wordnet import install_wordnet
-
+from EasySceneGraphFusion.cli.defaults import _DEFAULT_PREDICATE_SYNONYMS, _DEFAULT_OBJECT_SYNONYMS
 
 @dataclass(frozen=True)
 class ElementComparison:
@@ -259,7 +259,7 @@ def main() -> None:
     args = parser.parse_args()
 
     install_wordnet()
-    standardiser = Standardiser(wup_threshold=args.wup_threshold)
+    standardiser = Standardiser(wup_threshold=args.wup_threshold,object_syn_map=_DEFAULT_OBJECT_SYNONYMS, predicate_syn_map=_DEFAULT_PREDICATE_SYNONYMS)
     fusion = SceneGraphFusion(config=FusionConfig(iou_threshold=args.iou_threshold))
     try:
         result = compare_paths(args.graph_a, args.graph_b, standardiser, fusion)

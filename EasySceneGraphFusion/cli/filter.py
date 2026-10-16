@@ -13,56 +13,8 @@ from EasySceneGraphFusion.fusion import (
 )
 from EasySceneGraphFusion.fusion.io import collect_scene_graph_files
 from EasySceneGraphFusion.fusion.wordnet import install_wordnet
+from EasySceneGraphFusion.cli.defaults import OBJECT_BLACKLIST, RELATIONSHIP_BLACKLIST, _DEFAULT_OBJECT_SYNONYMS, _DEFAULT_PREDICATE_SYNONYMS
 from tqdm import tqdm
-OBJECT_BLACKLIST: set[str] = {
-    "tree", 
-    "building",
-    "banner",
-    "window",
-    "sky",
-    "umbrella",
-    "wall",
-    "grass",
-    "build",
-    "leaf",
-    "fence",
-    "bench",
-    "bush",
-    "wire",
-    "ground",
-    "background",
-    "store",
-    "tire",
-    "light",
-    "line",
-    "leg",
-    "pant",
-    "shoe",
-    "shirt",
-    "short",
-    "jacket",
-    "hat",
-    "door",
-    "city",
-    "camera",
-    "wheel",
-    "windshield",
-    "wing",
-    "wiper",
-    "tile",
-}
-
-RELATIONSHIP_BLACKLIST: set[str] = {
-    "attach_on",
-    "holding",
-    "paint_in",
-    "show",
-    "make_of",
-    "lift_up",
-    "lean_on",
-    "wearing",
-    
-}
 
 
 
@@ -92,7 +44,7 @@ def output_paths_for(
 
 def process_folder(input_root: Path, output_root: Path, blacklist: set[str], relationship_blacklist: set[str]) -> int:
     """Process all JSON files under *input_root* and write filtered graphs to *output_root*."""
-    standardiser = Standardiser(blacklist=blacklist, relationship_blacklist=relationship_blacklist)
+    standardiser = Standardiser(blacklist=blacklist, relationship_blacklist=relationship_blacklist, object_syn_map=_DEFAULT_OBJECT_SYNONYMS, predicate_syn_map=_DEFAULT_PREDICATE_SYNONYMS)
     processed_graphs = 0
 
     for input_path in tqdm(collect_scene_graph_files(input_root), desc="Processing scene graphs"):

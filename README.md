@@ -1,9 +1,20 @@
-# EasySceneGraph
-A project for creating, fusing and manipulating spatial scene graphs,  
+# EasySceneGraphFusion
+A project for creating, fusing and manipulating scene graphs,  
 
 
-## Data sets
-### Tested:
+This package is an open-set/open-vocabulary scene graph fusion package for fusing multiple scene graphs together. The goal of this was to improve current scene graph generation processes through two distinct methods
+
+- Fuse dissimilar scene graphs to capture more contextual information about a scene.
+- Fuse similar scene graphs together to improve accuracy and reliability of the resultant scene graph. 
+
+## Tested Packages:
+### Scene Graph Generators (SGG)
+- [**React++**](https://github.com/Maelic/SGG-Benchmark): Highly efficient and effective real time scene graph generation.
+- [**IETrans**](https://github.com/waxnkw/IETrans-SGG.pytorch): Transer based model that can apply Internal or External `data transfer` to convert simple predicates into more informative ones.
+- [**Reltr**](): Transformer based One-Stage SGG 
+- [**RelateAnything**](): A open-set Two-Stage predicate prediction model that can be used alongside existing scene graph generators to create a single SGG process.
+
+### Datasets:
 - [**NuScenes**](https://www.nuscenes.org/): `Tested`: A driving centric dataset containing multiple camera perspectives and highly annotated images.
 - [**Visual Genome**](https://homes.cs.washington.edu/~ranjay/visualgenome/index.html):`Tested` an ongoing effort to connect structured image concepts to language
 
@@ -17,7 +28,7 @@ pip install .
 
 ## Usage
 
-view the [**cli**] folder for additional scripts on how to use this package
+view the [**cli**] folder for scripts on how to use this package
 
 
 ### Fusion
