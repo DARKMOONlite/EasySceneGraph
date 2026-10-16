@@ -6,7 +6,7 @@ from time import time
 from typing import Any, TypedDict
 from functools import lru_cache
 
-from pipeline.database_manager import DatabaseManager
+from EasySceneGraphFusion.integrations.nuscenes.database import DatabaseManager
 
 
 try:
@@ -19,11 +19,18 @@ except ImportError as exc:  # pragma: no cover - import-time guard
 import numpy as np
 from scipy.spatial.transform import RigidTransform, Rotation as R
 from tqdm import tqdm
-from pipeline.util.util import (
+from EasySceneGraphFusion.integrations.nuscenes.geometry import (
     Sample,CameraSample, CAMERA_CHANNELS, anno2d_to_scene_object, organize_bounding_boxes_by_camera, project_annotations_to_2d,
 )
 
-from pipeline import SceneGraph, load_scene_graph_json, ObjectMatch, SceneObject, SceneGraphFusion, FusionConfig
+from EasySceneGraphFusion.fusion import (
+    FusionConfig,
+    ObjectMatch,
+    SceneGraph,
+    SceneGraphFusion,
+    SceneObject,
+    load_scene_graph_json,
+)
 
 
 

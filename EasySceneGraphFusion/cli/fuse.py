@@ -1,9 +1,9 @@
 
 from argparse import ArgumentParser
-from scene_graph_project.scene_graph_fusion.pipeline import Standardiser, SceneGraphFusion, FusionConfig, save_scene_graph_json,load_scene_graph_json
-from scene_graph_project.scene_graph_fusion.pipeline.models import SceneGraph
-from scene_graph_project.scene_graph_fusion.pipeline.wordnet import install_wordnet
-from scene_graph_project.scene_graph_fusion.pipeline.io_formats import collect_scene_graph_files
+from EasySceneGraphFusion.fusion import Standardiser, SceneGraphFusion, FusionConfig, save_scene_graph_json, load_scene_graph_json
+from EasySceneGraphFusion.fusion.models import SceneGraph
+from EasySceneGraphFusion.fusion.wordnet import install_wordnet
+from EasySceneGraphFusion.fusion.io import collect_scene_graph_files
 from tqdm import tqdm
 import os
 from pathlib import Path

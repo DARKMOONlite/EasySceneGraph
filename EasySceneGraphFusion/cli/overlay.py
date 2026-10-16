@@ -12,7 +12,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from scene_graph_project.scene_graph_fusion.pipeline import SceneGraph, load_scene_graph_json
+from EasySceneGraphFusion.fusion import SceneGraph, load_scene_graph_json
 
 PALETTE = (
     (255, 80, 80),

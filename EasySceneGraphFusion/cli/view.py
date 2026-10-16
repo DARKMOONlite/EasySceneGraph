@@ -1,5 +1,5 @@
-from scene_graph_project.scene_graph_fusion.pipeline.io_formats import load_scene_graph_json
-from scene_graph_project.scene_graph_fusion.pipeline.models import SceneGraph
+from EasySceneGraphFusion.fusion.io import load_scene_graph_json
+from EasySceneGraphFusion.fusion.models import SceneGraph
 from argparse import ArgumentParser
 from matplotlib import pyplot as plt
 

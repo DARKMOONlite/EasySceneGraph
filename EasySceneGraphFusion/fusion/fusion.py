@@ -19,8 +19,8 @@ from dataclasses import astuple, dataclass, field, replace
 from typing import Callable, Hashable
 from uuid import UUID
 
-from scene_graph_project.scene_graph_fusion.pipeline.models import BoundingBox, Relationship, SceneGraph, SceneObject
-from scene_graph_project.scene_graph_fusion.pipeline.wordnet import WordNetType, wup_confidence
+from EasySceneGraphFusion.fusion.models import BoundingBox, Relationship, SceneGraph, SceneObject
+from EasySceneGraphFusion.fusion.wordnet import WordNetType, wup_confidence
 from scipy.cluster.hierarchy import DisjointSet
 # ---------------------------------------------------------------------------
 # Configuration

@@ -16,12 +16,12 @@ import spacy
 # except ImportError:
 #     spacy = None
     # print("spaCy is not installed. Please install spaCy to use the Standardiser class.")
-from scene_graph_project.scene_graph_fusion.pipeline.wordnet import (
+from EasySceneGraphFusion.fusion.wordnet import (
     get_synsets,
     build_hierarchy,
     wup_confidence,
 )
-from scene_graph_project.scene_graph_fusion.pipeline.models import SceneGraph, SceneObject
+from EasySceneGraphFusion.fusion.models import SceneGraph, SceneObject
 
 # ---------------------------------------------------------------------------
 # Built-in synonym map – covers the most common cross-detector divergences.

@@ -1,5 +1,5 @@
 [project]
-name = "scene-graph-project"
+name = "EasySceneGraphFusion"
 version = "0.1.0"
 description = "Scene graph standardisation and fusion utilities"
 requires-python = ">=3.8"
@@ -8,7 +8,7 @@ dependencies = [
     "matplotlib",
     "networkx",
     "nltk",
-    "numpy < 2.0",
+    # "numpy < 2.0",
     "nuscenes-devkit",
     "ortools",
     "pillow",
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-filter-scene-graphs = "scene_graph_project.scene_graph_fusion.filter_scene_graphs:main"
+filter-scene-graphs = "EasySceneGraphFusion.cli.filter:main"
 [tool.setuptools.packages.find]
 where = ["."]   # looks for packages in the repo root
 

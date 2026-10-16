@@ -271,6 +271,42 @@ class SceneGraph:
                                         ax=axis)
         if show_plot:
             plt.show()
+
+    @classmethod
+    def merge(cls, graphs: list[SceneGraph]) -> SceneGraph:
+        """Merge multiple scene graphs into one, combining objects and relationships."""
+        if not graphs:
+            raise ValueError("No graphs to merge")
+        merged = cls(image_id=graphs[0].image_id, source="merged")
+        object_merge_dict = {}
+        relationships = []
+        for graph in graphs:
+            uid_to_object = {obj.uid: obj for obj in merged.objects}
+
+            object_merge_dict |= uid_to_object
+            relationships.extend(graph.relationships)
+        merged.objects = list(object_merge_dict.values())
+        merged.relationships = relationships
+
+        return merged
+
+    def filter_by_confidence(self, threshold: float) -> SceneGraph:
+        """Filter objects and relationships based on a confidence threshold."""
+        filtered_objects = [obj for obj in self.objects if obj.confidence >= threshold]
+        filtered_uids = {obj.uid for obj in filtered_objects}
+        filtered_relationships = [
+            rel
+            for rel in self.relationships
+            if rel.subject_uid in filtered_uids
+            and rel.object_uid in filtered_uids
+            and rel.confidence >= threshold
+        ]
+        return SceneGraph(
+            image_id=self.image_id,
+            source=self.source,
+            objects=filtered_objects,
+            relationships=filtered_relationships,
+        )
             
             
     @classmethod

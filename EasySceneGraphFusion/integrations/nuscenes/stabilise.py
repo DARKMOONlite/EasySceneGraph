@@ -12,12 +12,12 @@ if str(ILP_PROJECT_ROOT) not in sys.path:
 
 from neurosymbolic_pipeline.database_manager import DBRow, DatabaseManager
 from nuscenes_dev.util.windowing import build_scene_windows_by_length
-from scene_graph_project.scene_graph_fusion.pipeline.io_formats import load_scene_graph_json, scene_graph_to_dict
-from scene_graph_project.scene_graph_fusion.pipeline.temporal.temporal_stabaliser import TemporalStabaliser
+from EasySceneGraphFusion.fusion.io import load_scene_graph_json, scene_graph_to_dict
+from EasySceneGraphFusion.temporal.stabiliser import TemporalStabaliser
 import numpy as np
 from PIL import Image
-from scene_graph_project.scene_graph_fusion.filter_scene_graphs import filter_scene_graph,OBJECT_BLACKLIST
-from scene_graph_project.scene_graph_fusion.pipeline.standardiser import Standardiser
+from EasySceneGraphFusion.cli.filter import OBJECT_BLACKLIST, filter_scene_graph
+from EasySceneGraphFusion.fusion.standardiser import Standardiser
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 from multiprocessing import set_start_method

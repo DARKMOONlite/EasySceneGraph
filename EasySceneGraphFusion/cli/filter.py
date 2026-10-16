@@ -5,14 +5,14 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from pathlib import Path
 
-from scene_graph_project.scene_graph_fusion.pipeline import (
+from EasySceneGraphFusion.fusion import (
     SceneGraph,
     Standardiser,
     load_scene_graphs_json,
     save_scene_graph_json,
 )
-from scene_graph_project.scene_graph_fusion.pipeline.io_formats import collect_scene_graph_files
-from scene_graph_project.scene_graph_fusion.pipeline.wordnet import install_wordnet
+from EasySceneGraphFusion.fusion.io import collect_scene_graph_files
+from EasySceneGraphFusion.fusion.wordnet import install_wordnet
 from tqdm import tqdm
 OBJECT_BLACKLIST: set[str] = {
     "tree", 

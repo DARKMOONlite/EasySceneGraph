@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 from copy import deepcopy
-from scene_graph_project.scene_graph_fusion.pipeline.models import SceneObject, SceneGraph, Relationship
+from EasySceneGraphFusion.fusion.models import SceneObject, SceneGraph, Relationship
 
 
 
@@ -94,7 +94,3 @@ class TemporalSceneGraph:
                 )
 
         return compressed_graph
-    
-    def lossy_compression(self) -> SceneGraph:
-        """Compress all frames into one graph by merging objects connected by links, but only keep the first instance of each object."""
-        

@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 from ortools.graph.python import min_cost_flow
 from dataclasses import dataclass
-from scene_graph_project.scene_graph_fusion.pipeline.models import BoundingBox, SceneGraph, SceneGraphShape,SceneObject,Relationship
+from EasySceneGraphFusion.fusion.models import BoundingBox, SceneGraph, SceneGraphShape,SceneObject,Relationship
 from collections import Counter
 import matplotlib.pyplot as plt
 @dataclass
@@ -21,7 +21,6 @@ class TrackingConfig:
     label_penalty_weight: float = 0.5
     distance_penalty_weight: float = 0.25
     relationship_penalty_weight: float = 0.25
-    viz_show_source_sink: bool = False   # whether to show source/sink arcs in visualisation
     viz_show_zero_flow: bool = True           # whether to show arcs with zero flow in visualisation
 
 class NodeID(NamedTuple):

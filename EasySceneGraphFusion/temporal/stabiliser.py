@@ -18,9 +18,9 @@ from uuid import UUID, uuid4
 
 import cv2
 
-from scene_graph_project.scene_graph_fusion.pipeline.models import BoundingBox, SceneGraph, SceneObject, Relationship
-from scene_graph_project.scene_graph_fusion.pipeline.network_flow import NetworkFlow, NodeID, TrackingConfig
-from scene_graph_project.scene_graph_fusion.pipeline.temporal.temporal_scene_graph import TemporalSceneGraph
+from EasySceneGraphFusion.fusion.models import BoundingBox, SceneGraph, SceneObject, Relationship
+from EasySceneGraphFusion.temporal.tracking import NetworkFlow, NodeID
+from EasySceneGraphFusion.temporal.graph import TemporalSceneGraph
 from boxmot.trackers.basetracker import BaseTracker
 from boxmot.trackers.tracker_zoo import create_tracker
 import numpy as np
@@ -59,19 +59,7 @@ class TemporalStabaliser:
             f"objects={sum(len(g.objects) for g in tracked_graphs)}, "
             f"relationships={sum(len(g.relationships) for g in tracked_graphs)}"
         )
-        nf = NetworkFlow(
-            config=TrackingConfig(
-                birth_cost=1.2,
-                death_cost=1.2,
-                birth_time_bias=0.02,
-                death_time_bias=0.02,
-                skip_penalty=0.5,
-                max_skip=2,
-                max_candidates_per_node=5,
-                min_track_length=2,
-                viz_show_source_sink=False,
-            )
-        )
+        nf = NetworkFlow()
         _mcf, _node_ids, filtered_tracks = nf.m_cost_flow(tracked_graphs)
         aligned_scene_graphs = self.align_scene_graph_ids(filtered_tracks, tracked_graphs)
         nf.visualise(_mcf,_node_ids)
@@ -185,4 +173,3 @@ class TemporalStabaliser:
     def reduce_noise(self, graphs: list[SceneGraph]) -> list[SceneGraph]:
         """Reduce noise or flickering relationships between frames."""
         return graphs
-

@@ -16,7 +16,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from PIL import Image
-from scene_graph_project.scene_graph_fusion.pipeline import load_scene_graph_json,SceneGraph,BoundingBox,SceneObject
+from EasySceneGraphFusion.fusion import load_scene_graph_json, SceneGraph, BoundingBox, SceneObject
 
 
 class CAMERA_CHANNELS(enum.Enum):
@@ -473,4 +473,3 @@ def build_lookup_tables(nusc: NuScenes) -> tuple[dict[str, str], dict[str, str]]
     }
     attribute_name_by_token = {row["token"]: row["name"] for row in nusc.attribute}
     return category_name_by_instance, attribute_name_by_token
-

@@ -11,14 +11,14 @@ from uuid import UUID
 
 from tqdm import tqdm
 
-from scene_graph_project.scene_graph_fusion.pipeline import (
+from EasySceneGraphFusion.fusion import (
     FusionConfig,
     SceneGraph,
     SceneGraphFusion,
     Standardiser,
     load_scene_graph_json,
 )
-from scene_graph_project.scene_graph_fusion.pipeline.wordnet import install_wordnet
+from EasySceneGraphFusion.fusion.wordnet import install_wordnet
 
 
 @dataclass(frozen=True)
