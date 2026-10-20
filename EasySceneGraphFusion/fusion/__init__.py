@@ -1,4 +1,12 @@
-"""Public API for scene-graph standardisation and fusion."""
+"""Public API for scene-graph models, standardisation, I/O, and fusion.
+
+Modules:
+    classes: Canonical graphs, objects, relationships, and bounding boxes.
+    fusion: Object matching and multi-source scene-graph merging.
+    io: JSON, Visual Genome, and COCO loading and JSON serialisation.
+    standardiser: Label normalisation and graph element blacklisting.
+    wordnet: WordNet lookup, hierarchy, and semantic similarity helpers.
+"""
 
 from .fusion import FusionConfig, ObjectMatch, SceneGraphFusion
 from .io import (

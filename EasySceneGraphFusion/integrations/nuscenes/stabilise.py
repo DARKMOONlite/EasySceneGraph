@@ -9,8 +9,8 @@ ILP_PROJECT_ROOT = Path("~/Documents/phd/inductive_logic_programming/neurosymbol
 if str(ILP_PROJECT_ROOT) not in sys.path:
     sys.path.append(str(ILP_PROJECT_ROOT))
 
-from neurosymbolic_pipeline.database_manager import DBRow, DatabaseManager
-from nuscenes_dev.util.windowing import build_scene_windows_by_length
+from multiframe_behaviours.database import DBRow, DatabaseManager
+from multiframe_behaviours.nuscenes.util.windowing import build_scene_windows_by_length
 from EasySceneGraphFusion.fusion.io import load_scene_graph_json, scene_graph_to_dict
 from EasySceneGraphFusion.temporal.stabiliser import TemporalStabaliser
 import numpy as np
