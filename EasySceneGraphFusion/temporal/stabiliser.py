@@ -37,7 +37,7 @@ class TemporalStabaliser:
     """
 
     def __init__(self):
-        self.tracker: BaseTracker | None = None
+        self.tracker: BaseTracker | None = create_tracker("botsort", reid_weights="clip_vehicleid.pt")
         pass
 
     def stabalise(self, graphs: list[SceneGraph]) -> TemporalSceneGraph:
@@ -73,25 +73,10 @@ class TemporalStabaliser:
             return TemporalSceneGraph(graphs=[])
         if len(graphs) != len(images):
             raise ValueError(f"Expected the same number of graphs and images, got {len(graphs)} and {len(images)}.")
-
         if self.tracker is None:
-            self.tracker = create_tracker("botsort", reid_weights="clip_vehicleid.pt")
-
+            raise ValueError("Tracker has not been initialized.")
             
-        # tracker: OccluBoost = OccluBoost(
-        #     reid_model="ss.pt",
-        #     recovery_appearance_thresh=0.4,
-        #     ams_alpha0=0.5,
-        #     ams_threshold=0.6,
-        #     ams_buffer_size=10,
-        #     ams_shrink_ratio=0.5,
-            
-        #     )  # type: ignore
-        #  update parameters
-        
 
-        
-        
         tracked_graphs = deepcopy(graphs)
         label_to_class_id: dict[str, int] = {}
         track_to_nodes: dict[int, list[NodeID]] = defaultdict(list)

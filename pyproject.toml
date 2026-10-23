@@ -16,8 +16,7 @@ dependencies = [
 ]
 [project.optional-dependencies]
 nuscenes = [
-    "nuscenes-devkit>=1.2.0,<1.3",
-    "multiframe-behaviours @ git+https://github.com/DARKMOONlite/multiframe_behavioural_predicates",
+    "nuscenes-devkit @ git+https://github.com/DARKMOONlite/nuscenes-devkit-numpy2.0.0",
 ]
 
 [project.scripts]

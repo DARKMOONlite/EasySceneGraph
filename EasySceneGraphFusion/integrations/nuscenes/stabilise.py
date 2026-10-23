@@ -1,25 +1,29 @@
 from __future__ import annotations
+
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from multiprocessing import set_start_method
 from os import getpid
 from pathlib import Path
 import json
+import logging
 import sys
+from typing import Any, Callable
+
+import numpy as np
+from PIL import Image
+from tqdm import tqdm
 
 ILP_PROJECT_ROOT = Path("~/Documents/phd/inductive_logic_programming/neurosymbolic_ILP").expanduser()
 if str(ILP_PROJECT_ROOT) not in sys.path:
     sys.path.append(str(ILP_PROJECT_ROOT))
 
-from multiframe_behaviours.database import DBRow, DatabaseManager
-from multiframe_behaviours.nuscenes.util.windowing import build_scene_windows_by_length
-from EasySceneGraphFusion.fusion.io import load_scene_graph_json, scene_graph_to_dict
-from EasySceneGraphFusion.temporal.stabiliser import TemporalStabaliser
-import numpy as np
-from PIL import Image
 from EasySceneGraphFusion.cli.filter import OBJECT_BLACKLIST, filter_scene_graph
+from EasySceneGraphFusion.fusion.io import load_scene_graph_json, scene_graph_to_dict
 from EasySceneGraphFusion.fusion.standardiser import Standardiser
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from tqdm import tqdm
-from multiprocessing import set_start_method
+from EasySceneGraphFusion.integrations.nuscenes.database import DBRow, DatabaseManager
+from EasySceneGraphFusion.integrations.nuscenes.util.windowing import build_scene_windows_by_length
+from EasySceneGraphFusion.temporal.stabiliser import TemporalStabaliser
 
 
 def _compressed_name(first_path: Path, last_path: Path) -> str:
@@ -72,17 +76,21 @@ def _sample_to_sample_windows(
     sample_window_size: int,
     sample_overlap: int,
 ) -> list[list[dict]]:
-    sample_idxs = [i for i, row in enumerate(track) if str(row.get("image_type", "")).lower() == "sample"]
-    if len(sample_idxs) < sample_window_size:
+    sample_indices = [
+        index
+        for index, row in enumerate(track)
+        if str(row.get("image_type", "")).lower() == "sample"
+    ]
+    if len(sample_indices) < sample_window_size:
         return []
 
     step = sample_window_size - sample_overlap
     windows: list[list[dict]] = []
-    for start in range(0, len(sample_idxs) - sample_window_size + 1, step):
+    for start in range(0, len(sample_indices) - sample_window_size + 1, step):
         end = start + sample_window_size
-        start_idx = sample_idxs[start]
-        end_idx = sample_idxs[end - 1]
-        windows.append(track[start_idx:end_idx + 1])
+        first_frame = sample_indices[start]
+        last_frame = sample_indices[end - 1]
+        windows.append(track[first_frame:last_frame + 1])
     return windows
 
 
@@ -120,7 +128,7 @@ def _validate_window_overlap(size: int, overlap: int, size_flag: str, overlap_fl
 
 
 def _normalised_entity_prefix(raw_label: str) -> str:
-    label = raw_label.split("_", 1)[0] if "_" in raw_label else raw_label
+    label = raw_label.split("_", 1)[0]
     label = label.strip().lower()
     return label or "object"
 
@@ -133,8 +141,8 @@ def save_scene_graph(graph, output_path: Path) -> None:
         scene_graph_id = obj.get("id", "")
         obj["force_label"] = f"{label}_{scene_graph_id}_{instance_token}"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(output_path, "w") as output_file:
+        json.dump(data, output_file, indent=2)
 
 
 def _resolve_scene_graph_path(args, frame_path: Path) -> Path | None:
@@ -157,6 +165,24 @@ def _relative_parent_for_output(args, graph_path: Path) -> Path:
         except ValueError:
             pass
     raise ValueError(f"Scene graph path is outside the configured graph folders: {graph_path}")
+
+
+def _window_output_path(args, window_job: dict, first_graph_path: Path) -> Path:
+    output_root = Path(args.output_folder)
+    if args.use_action_result_timestamps:
+        filename = (
+            f"{window_job['scene_name']}__{window_job['channel']}__"
+            f"{window_job['start_aligned_timestamp']}-{window_job['end_aligned_timestamp']}.json"
+        )
+        return output_root / window_job["channel"] / filename
+
+    window_rows = window_job["rows"]
+    first_frame = _aligned_output_frame_path(window_rows[0])
+    last_frame = _aligned_output_frame_path(window_rows[-1])
+    first_graph = _resolve_scene_graph_path(args, first_frame) or first_frame.with_suffix(".json")
+    last_graph = _resolve_scene_graph_path(args, last_frame) or last_frame.with_suffix(".json")
+    relative_parent = _relative_parent_for_output(args, first_graph_path)
+    return output_root / relative_parent / _compressed_name(first_graph, last_graph)
 
 
 def _build_action_result_windows(
@@ -193,10 +219,13 @@ def _build_action_result_windows(
         rows_by_channel.setdefault(str(channel), []).append((aligned_ts, row))
 
     windows: list[dict] = []
-    for channel, ts_rows in rows_by_channel.items():
-        ts_rows.sort(key=lambda item: item[0])
+    for channel, timestamp_rows in rows_by_channel.items():
+        timestamp_rows.sort(key=lambda item: item[0])
         for scene_name, start_ts, end_ts in window_ranges:
-            window_rows = [row for aligned_ts, row in ts_rows if start_ts <= aligned_ts <= end_ts]
+            window_rows = [
+                row for aligned_ts, row in timestamp_rows
+                if start_ts <= aligned_ts <= end_ts
+            ]
             if not window_rows:
                 continue
             windows.append(
@@ -215,35 +244,36 @@ def _build_action_result_windows(
 _worker_args = None
 _worker_images_root: Path | None = None
 _worker_standardiser = None
-_worker_stabaliser = None
+_worker_stabiliser = None
 
 
 def _initialise_worker(args, images_root: Path) -> None:
-    global _worker_args, _worker_images_root, _worker_standardiser, _worker_stabaliser
+    global _worker_args, _worker_images_root, _worker_standardiser, _worker_stabiliser
     _worker_args = args
     _worker_images_root = images_root
-    if args.no_blacklist:
-        _worker_standardiser = Standardiser(blacklist=set())
-    else:
-        _worker_standardiser = Standardiser(blacklist=OBJECT_BLACKLIST)
-    _worker_stabaliser = TemporalStabaliser()
+    blacklist = set() if args.no_blacklist else OBJECT_BLACKLIST
+    _worker_standardiser = Standardiser(blacklist=blacklist)
+    _worker_stabiliser = TemporalStabaliser()
 
-def _process_window_job(window_job: dict) -> tuple[int, int, float, int]:
-    args = _worker_args
+
+def _process_window(window_job: dict) -> tuple[int, int, float, int]:
+    args = _worker_args # Use the global worker arguments for this process set by the worker initialization
     window_rows = window_job["rows"]
-    frame_paths = [Path(row["filename"]) for row in window_rows]
+    json_paths = [Path(row["filename"]) for row in window_rows]
     scene_graphs = []
     scene_graph_paths: list[Path] = []
     image_arrays: list[np.ndarray] = []
-    for frame_path in frame_paths:
-        graph_rel_path = frame_path.with_suffix(".json")
-        is_sweep_frame = bool(frame_path.parts) and frame_path.parts[0] == "sweeps"
-        scene_graph_path = _resolve_scene_graph_path(args, frame_path)
-        if scene_graph_path is None or not scene_graph_path.exists():
+    for json in json_paths:
+        graph_rel_path = json.with_suffix(".json")
+        
+        is_sweep_frame = bool(json.parts) and json.parts[0] == "sweeps"
+        
+        scene_graph_path = _resolve_scene_graph_path(args, json)
+        if scene_graph_path is None or not scene_graph_path.exists(): # cant find the corresponding scene graph
             if is_sweep_frame:
                 continue
             return 0, 0, 0.0, 0
-        image_path = _worker_images_root / frame_path
+        image_path = _worker_images_root / json
         if not image_path.exists():
             return 0, 0, 0.0, 0
         scene_graph_paths.append(scene_graph_path)
@@ -253,41 +283,40 @@ def _process_window_job(window_job: dict) -> tuple[int, int, float, int]:
     if not scene_graphs:
         return 0, 0, 0.0, 0
 
-    temporal_graph = _worker_stabaliser.mot_tracking(scene_graphs, images=image_arrays, visualise=args.visualise)
+    temporal_graph = _worker_stabiliser.mot_tracking(
+        scene_graphs,
+        images=image_arrays,
+        visualise=args.visualise,
+    )
     compressed_graph = temporal_graph.compress()
     unlinked_objects = sum(len(graph.objects) for graph in temporal_graph.graphs) - sum(
         len(link.instances) for link in temporal_graph.links
     )
 
-    if args.use_action_result_timestamps:
-        output_path = (
-            Path(args.output_folder)
-            / window_job["channel"]
-            / (
-                f"{window_job['scene_name']}__{window_job['channel']}__"
-                f"{window_job['start_aligned_timestamp']}-{window_job['end_aligned_timestamp']}.json"
-            )
-        )
-    else:
-        first_output_path = _aligned_output_frame_path(window_rows[0])
-        last_output_path = _aligned_output_frame_path(window_rows[-1])
-        output_path = Path(args.output_folder) / _relative_parent_for_output(
-            args, scene_graph_paths[0]
-        ) / _compressed_name(
-            _resolve_scene_graph_path(args, first_output_path) or first_output_path.with_suffix(".json"),
-            _resolve_scene_graph_path(args, last_output_path) or last_output_path.with_suffix(".json"),
-        )
+    output_path = _window_output_path(args, window_job, scene_graph_paths[0])
     save_scene_graph(compressed_graph, output_path)
     print(f"Worker {getpid()} completed a window", flush=True)
-    return 1, temporal_graph.num_links, (
-        temporal_graph.num_links / unlinked_objects if unlinked_objects else 0.0
-    ), int(bool(unlinked_objects))
+    links_unlinked_ratio = temporal_graph.num_links / unlinked_objects if unlinked_objects else 0.0
+    return 1, temporal_graph.num_links, links_unlinked_ratio, int(bool(unlinked_objects))
+
+
+def _sum_window_results(results: list[tuple[int, int, float, int]]) -> tuple[int, int, float, int]:
+    return (
+        sum(result[0] for result in results),
+        sum(result[1] for result in results),
+        sum((result[2] for result in results), 0.0),
+        sum(result[3] for result in results),
+    )
 
 
 def _process_window_jobs(window_jobs: list[dict]) -> tuple[int, int, float, int]:
-    if not window_jobs:
-        return 0, 0, 0.0, 0
-    return tuple(sum(values) for values in zip(*(_process_window_job(job) for job in window_jobs)))
+    results = []
+    for job in window_jobs:
+        try:
+            results.append(_process_window(job))
+        except Exception:
+            logging.exception( "Worker %s: skipping failed window starting at %s", getpid(), job["rows"][0]["filename"] if job.get("rows") else "<empty>",)
+    return _sum_window_results(results)
 
 
 def _process_track_batch(tracks: list[list[dict]]) -> tuple[int, int, float, int]:
@@ -302,7 +331,7 @@ def _process_track_batch(tracks: list[list[dict]]) -> tuple[int, int, float, int
     return _process_window_jobs(window_jobs)
 
 
-def main(args):
+def _validate_args(args) -> None:
     if not args.samples_folder.is_dir():
         raise FileNotFoundError(f"Samples folder does not exist: {args.samples_folder}")
     if not args.sweeps_folder.is_dir():
@@ -315,18 +344,29 @@ def main(args):
         raise ValueError("--visualise requires --threads 1")
 
     if args.use_action_result_timestamps:
-        _validate_window_overlap(args.window_length, args.window_overlap, "--window-length", "--window-overlap")
+        _validate_window_overlap(
+            args.window_length, args.window_overlap, "--window-length", "--window-overlap"
+        )
     else:
-        _validate_window_overlap(args.sample_window_size, args.sample_overlap, "--sample-window-size", "--sample-overlap")
+        _validate_window_overlap(
+            args.sample_window_size, args.sample_overlap,
+            "--sample-window-size", "--sample-overlap",
+        )
 
+
+def main(args) -> None:
+    _validate_args(args)
     db = DatabaseManager(args.db)
-    image_rows:list[DBRow] = db.get_rows("images")
+    
+    image_rows: list[DBRow] = db.get_rows("images")
+    # if only_annotations is specified, we will later filter image_rows to include only those scenes that have human annotations
     annotated_scenes = _annotation_scene_names(db) if args.only_annotations else None
     if annotated_scenes is not None:
         image_rows = _filter_rows_by_scene(image_rows, annotated_scenes)
         print(f"Restricting processing to {len(annotated_scenes)} scenes in human_annotations")
+        
     if args.use_action_result_timestamps:
-        window_jobs, unique_range_count = _build_action_result_windows(
+        work_items, unique_range_count = _build_action_result_windows(
             db=db,
             image_rows=image_rows,
             window_length=args.window_length,
@@ -334,42 +374,44 @@ def main(args):
             scene_names=annotated_scenes,
         )
         print(
-            f"Found {len(window_jobs)} camera windows from action_results "
+            f"Found {len(work_items)} camera windows from action_results "
             f"({unique_range_count} unique windows)"
         )
 
-        batches = [window_jobs[i:i + args.batch_size] for i in range(0, len(window_jobs), args.batch_size)]
-        worker = _process_window_jobs
+        worker: Callable[[list[Any]], Any] = _process_window_jobs
+        
     else:
-        tracks = _build_tracks(image_rows)
-        print(f"Found {len(tracks)} full tracks in images table")
-        # Split whole tracks as evenly as possible across worker processes.
-        batches = [tracks[i:i + args.batch_size] for i in range(0, len(tracks), args.batch_size)]
-        worker = _process_track_batch
+        work_items = _build_tracks(image_rows)
+        print(f"Found {len(work_items)} full tracks in images table")
+        worker: Callable[[list[Any]], Any] = _process_track_batch
 
-    if batches:
-        set_start_method("spawn", force=True)
-        with ProcessPoolExecutor(max_workers=args.threads,initializer=_initialise_worker,initargs=(args, args.images_root),) as executor:
-            futures = [executor.submit(worker, batch) for batch in batches] # type: ignore
-            results = [
-                future.result()
-                # Advance when a batch finishes, rather than when it is submitted.
-                for future in tqdm(as_completed(futures), total=len(futures), desc="Processing batches")
-            ]
-    else:
-        results = []
 
-    successful_windows = sum(result[0] for result in results)
-    total_links = sum(result[1] for result in results)
-    total_links_unlinked_ratio = sum(result[2] for result in results)
-    ratio_window_count = sum(result[3] for result in results)
-    average_links = total_links / successful_windows if successful_windows else 0
-    average_links_unlinked_ratio = total_links_unlinked_ratio / ratio_window_count if ratio_window_count else 0
+    # Split work items into batches for parallel processing
+    batches = [
+        work_items[start:start + args.batch_size]
+        for start in range(0, len(work_items), args.batch_size)
+    ]
+    if not batches:
+        print("No work items to process.")
+        return
+    
+    results = []
+    set_start_method("spawn", force=True)
+    with ProcessPoolExecutor(max_workers=args.threads, initializer=_initialise_worker, initargs=(args, args.images_root),) as executor:
+        
+        futures = [executor.submit(worker, batch) for batch in batches]  # type: ignore
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing batches"):
+            results.append(future.result())
+
+    successful_windows, total_links, total_links_unlinked_ratio, ratio_window_count = (_sum_window_results(results))
+    
+
     print(f"Successful windows: {successful_windows}")
-    print(f"Average links found: {average_links}")
-    print(f"Average links/unlinked ratio: {average_links_unlinked_ratio}")
+    print(f"Average links found: {total_links / successful_windows if successful_windows else 0}")
+    print(f"Average links/unlinked ratio: {total_links_unlinked_ratio / ratio_window_count if ratio_window_count else 0}")
 
-if __name__ == "__main__":
+
+def _parse_args():
     parser = ArgumentParser()
 
     parser.add_argument(
@@ -397,13 +439,18 @@ if __name__ == "__main__":
         required=True,
         help="Folder to write compressed graphs",
     )
-    parser.add_argument("--db", type=Path, help="Path to the database file",default=ILP_PROJECT_ROOT / "db/nuscenes.db")
+    parser.add_argument(
+        "--db",
+        type=Path,
+        help="Path to the database file",
+        default=ILP_PROJECT_ROOT / "db/nuscenes.db",
+    )
     parser.add_argument(
         "--only-annotations",
         action="store_true",
         help="Only stabilise scenes listed in human_annotations.scene_name.",
     )
-    parser.add_argument("-v","--visualise", action="store_true", help="Visualise the tracking results")
+    parser.add_argument("-v", "--visualise", action="store_true", help="Visualise the tracking results")
     parser.add_argument(
         "--use-action-result-timestamps",
         action="store_true",
@@ -434,8 +481,15 @@ if __name__ == "__main__":
         help="How many sample images consecutive windows share (ignored with --use-action-result-timestamps)",
     )
     parser.add_argument("--threads", type=int, default=1, help="Number of worker processes")
-    parser.add_argument("--batch-size", type=int, default=5, help="Number of windows to process per worker (default: 5)")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=5,
+        help="Number of windows to process per worker (default: 5)",
+    )
     parser.add_argument("--no-blacklist", action="store_true", help="Disable object label blacklist filtering")
-    
-    args = parser.parse_args()
-    main(args)
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main(_parse_args())
